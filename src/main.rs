@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::runtime::Runtime;
 
 use icloud::client::Client;
-use icloud::session::SessionData;
+use icloud::SessionData;
 
 use icloud_fuse::{
     Error,
