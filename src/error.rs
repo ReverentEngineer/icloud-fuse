@@ -1,4 +1,4 @@
-type ICloudError = icloud::error::Error;
+pub type ICloudError = icloud::error::Error;
 
 #[derive(Debug)]
 pub enum Error {

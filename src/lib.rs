@@ -1,23 +1,16 @@
-use std::time::{
-    Duration,
-    SystemTime
-};
-use std::sync::Arc;
-use libc::ENOENT;
-use tokio::runtime::Runtime;
 use fuser::{
     FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
 };
 use futures::lock::Mutex;
-use icloud::drive::{
-    DriveService,
-};
+use icloud::drive::DriveService;
+use libc::ENOENT;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use tokio::runtime::Runtime;
 
 pub mod error;
 pub mod metadata;
-use metadata::{
-    MetadataTable
-};
+use metadata::MetadataTable;
 
 pub type Error = error::Error;
 pub type SyncMutex<T> = std::sync::Mutex<T>;

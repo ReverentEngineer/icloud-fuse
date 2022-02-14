@@ -14,4 +14,6 @@ tokio = { version = "1.16", features = ["full"] }
 fuser = "0.10"
 uuid = "0.8"
 async-recursion = "1"
+clap = { version = "3.0", features = ["derive"] }
+rpassword = "5.0"
 icloud = { git = "https://github.com/ReverentEngineer/icloud-rs" }

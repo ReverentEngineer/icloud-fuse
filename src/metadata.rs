@@ -1,27 +1,24 @@
 use std::collections::{BTreeMap, BTreeSet};
-use fuser::{
-    FileAttr,
-    FileType
+use libc::{
+    geteuid,
+    getegid
 };
 use async_recursion::async_recursion;
-use icloud::drive::{
-    DriveNode,
-    DriveService
-};
+use fuser::{FileAttr, FileType};
+use icloud::drive::{DriveNode, DriveService};
 use icloud::error::Error;
 
 pub struct Metadata {
     inode: u64,
     parent: Option<u64>,
     node: DriveNode,
-    children: BTreeSet<u64>
+    children: BTreeSet<u64>,
 }
 
 impl Metadata {
-
     pub fn inode(&self) -> u64 {
         self.inode
-    } 
+    }
 
     pub fn name(&self) -> &String {
         self.node.name()
@@ -58,41 +55,45 @@ impl Into<FileAttr> for &Metadata {
                 crtime: self.node.date_created().into(),
                 mtime: self.node.date_created().into(),
                 flags: 0,
-                uid: 0,
-                gid: 0,
+                uid: unsafe { geteuid() },
+                gid: unsafe { getegid() },
                 kind: fuser::FileType::Directory,
                 nlink: 0,
                 rdev: 0,
-                perm: 0o400
-            }, DriveNode::File(file) => FileAttr {
+                perm: 0o400,
+            },
+            DriveNode::File(file) => FileAttr {
                 ino: self.inode,
                 blocks: 1,
                 blksize: 4096,
                 size: 4096,
                 atime: file.last_opened.unwrap().into(),
                 ctime: file.date_changed.into(),
-                crtime:self.node.date_created().into(),
+                crtime: self.node.date_created().into(),
                 mtime: file.date_modified.into(),
                 flags: 0,
-                uid: 0,
-                gid: 0,
+                uid: unsafe { geteuid() },
+                gid: unsafe { getegid() },
                 kind: fuser::FileType::RegularFile,
                 nlink: 0,
                 rdev: 0,
-                perm: 0o600
-            }
+                perm: 0o600,
+            },
         }
     }
-
 }
 
 pub struct MetadataTable {
     next_inode: u64,
-    inodes: BTreeMap<u64, Metadata>
+    inodes: BTreeMap<u64, Metadata>,
 }
 
 #[async_recursion]
-async fn update_node_metadata(mut metadata: &mut MetadataTable, node: &DriveNode, parent: Option<u64>) {
+async fn update_node_metadata(
+    mut metadata: &mut MetadataTable,
+    node: &DriveNode,
+    parent: Option<u64>,
+) {
     let inode_num = metadata.insert(node, parent);
     if let DriveNode::Folder(folder) = node {
         for item in folder.iter() {
@@ -101,12 +102,11 @@ async fn update_node_metadata(mut metadata: &mut MetadataTable, node: &DriveNode
     }
 }
 
-impl MetadataTable { 
-
+impl MetadataTable {
     pub fn new() -> MetadataTable {
-        MetadataTable{
+        MetadataTable {
             next_inode: 1,
-            inodes: BTreeMap::new()
+            inodes: BTreeMap::new(),
         }
     }
 
@@ -154,9 +154,9 @@ impl MetadataTable {
     pub fn get_by_name(&self, name: String, parent: u64) -> Option<&Metadata> {
         for (_, metadata) in &self.inodes {
             if *metadata.name() == name {
-                if let Some(node_parent) = metadata.parent()  {
+                if let Some(node_parent) = metadata.parent() {
                     if parent == node_parent {
-                        return Some(metadata)
+                        return Some(metadata);
                     }
                 }
             }
