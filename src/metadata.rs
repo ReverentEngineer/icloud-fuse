@@ -66,7 +66,7 @@ impl Into<FileAttr> for &Metadata {
                 blocks: 1,
                 blksize: 4096,
                 size: 4096,
-                atime: file.last_opened.unwrap().into(),
+                atime: file.last_opened.unwrap_or(self.node.date_created()).into(),
                 ctime: file.date_changed.into(),
                 crtime: self.node.date_created().into(),
                 mtime: file.date_modified.into(),
