@@ -2,11 +2,15 @@ use fuser::{
     FileAttr, FileType, Filesystem, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request,
 };
 use futures::lock::Mutex;
-use icloud::drive::DriveService;
+use icloud::drive::{
+    DriveService,
+    DriveNode
+};
 use libc::ENOENT;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::runtime::Runtime;
+use async_recursion::async_recursion;
 
 pub mod error;
 pub mod metadata;
@@ -21,6 +25,23 @@ pub struct ICloudFilesystem {
     drive: Arc<AsyncMutex<DriveService>>,
     metadata: Arc<AsyncMutex<MetadataTable>>,
     runtime: Arc<SyncMutex<Runtime>>,
+}
+
+#[async_recursion]
+async fn update_node_metadata(
+    metadata: &mut MetadataTable,
+    drive: &mut DriveService,
+    node: &DriveNode,
+    parent: Option<u64>,
+) -> Result<(), Error> {
+    let inode_num = metadata.insert(node, parent);
+    if let DriveNode::Folder(folder) = node {
+        for item in folder.iter() {
+            let node = drive.get_node(item.id()).await?;
+            update_node_metadata(metadata, drive, &node, Some(inode_num)).await?;
+        }
+    }
+    Ok(())
 }
 
 impl ICloudFilesystem {
@@ -41,10 +62,11 @@ impl ICloudFilesystem {
         if let Ok(runtime) = self.runtime.lock() {
             let drive = self.drive.clone();
             let metadata = self.metadata.clone();
-            runtime.spawn(async move {
+            runtime.block_on(async move {
                 let mut metadata = metadata.lock().await;
                 let mut drive = drive.lock().await;
-                metadata.update(&mut drive).await.unwrap()
+                let root = drive.root().await.unwrap();
+                update_node_metadata(&mut metadata, &mut drive, &DriveNode::Folder(root), None);
             });
         }
 

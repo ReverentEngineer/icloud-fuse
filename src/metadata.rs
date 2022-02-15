@@ -3,7 +3,6 @@ use libc::{
     geteuid,
     getegid
 };
-use async_recursion::async_recursion;
 use fuser::{FileAttr, FileType};
 use icloud::drive::{DriveNode, DriveService};
 use icloud::error::Error;
@@ -88,19 +87,7 @@ pub struct MetadataTable {
     inodes: BTreeMap<u64, Metadata>,
 }
 
-#[async_recursion]
-async fn update_node_metadata(
-    mut metadata: &mut MetadataTable,
-    node: &DriveNode,
-    parent: Option<u64>,
-) {
-    let inode_num = metadata.insert(node, parent);
-    if let DriveNode::Folder(folder) = node {
-        for item in folder.iter() {
-            update_node_metadata(&mut metadata, item, Some(inode_num)).await;
-        }
-    }
-}
+
 
 impl MetadataTable {
     pub fn new() -> MetadataTable {
@@ -118,13 +105,6 @@ impl MetadataTable {
         }
         None
     }
-
-    pub async fn update(&mut self, drive: &mut DriveService) -> Result<(), Error> {
-        let root = drive.root().await?;
-        update_node_metadata(self, &DriveNode::Folder(root), None).await;
-        Ok(())
-    }
-
 
     pub fn insert(&mut self, node: &DriveNode, parent: Option<u64>) -> u64 {
         match self.get_by_id(node.id()) {
