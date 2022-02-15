@@ -37,8 +37,12 @@ async fn update_node_metadata(
     let inode_num = metadata.insert(node, parent);
     if let DriveNode::Folder(folder) = node {
         for item in folder.iter() {
-            let node = drive.get_node(item.id()).await?;
-            update_node_metadata(metadata, drive, &node, Some(inode_num)).await?;
+            if let DriveNode::Folder(_) = item {
+                let node = drive.get_node(item.id()).await?;
+                update_node_metadata(metadata, drive, &node, Some(inode_num)).await?;
+            } else {
+                metadata.insert(item, Some(inode_num));
+            }
         }
     }
     Ok(())
