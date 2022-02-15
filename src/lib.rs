@@ -66,7 +66,7 @@ impl ICloudFilesystem {
                 let mut metadata = metadata.lock().await;
                 let mut drive = drive.lock().await;
                 let root = drive.root().await.unwrap();
-                update_node_metadata(&mut metadata, &mut drive, &DriveNode::Folder(root), None);
+                update_node_metadata(&mut metadata, &mut drive, &DriveNode::Folder(root), None).await.unwrap();
             });
         }
 
